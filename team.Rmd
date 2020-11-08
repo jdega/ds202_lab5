@@ -1,0 +1,107 @@
+---
+title: "Lab 5 - Team"
+author: "Jonathan DeGardner"
+date: "11/8/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+acc <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/accident.csv", stringsAsFactors = FALSE)
+people <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/person.csv", stringsAsFactors = FALSE)
+vehicle <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/vehicle.csv", stringsAsFactors = FALSE)
+
+library(ggplot2)
+library(tidyverse)
+library(readxl)
+```
+
+
+### Question 1
+```{r}
+ggplot(acc, aes(DAY_WEEK)) + geom_bar()
+```
+
+The most accidents happen on Saturday, followed closely by Sunday and Friday.
+
+
+### Question 2
+```{r}
+fatal <- people %>%
+  filter(INJ_SEV == '4') %>%
+  select(AGE, SEX, PER_TYP, PER_NO)
+head(fatal)
+```
+
+
+### Question 3
+```{r}
+most_danger <- full_join(people, vehicle)
+most_danger <- most_danger %>%
+  select(STATE, PER_NO, MAKE) %>%
+  group_by(STATE) %>%
+  slice_max(PER_NO, n=1, with_ties = FALSE) %>%
+  arrange(STATE)
+most_danger$group = most_danger$STATE
+most_danger
+```
+
+
+### Question 4
+```{r}
+codes <- read_excel('C:\\Users\\Jonny DeGardner\\Desktop\\Cawlige\\S.S1\\DS 202\\ds202_lab5\\FRPP_GLC_-_United_StatesSep292020.xlsx')
+
+states <- map_data('state')
+states1 <- inner_join(most_danger, states, by='group')
+make_num <- aggregate(cbind(long, lat, MAKE) ~ region, data=states1, FUN=function(x)mean(range(x)))
+
+ggplot(states, aes(x=long, y=lat)) + geom_polygon(aes(group=group)) + geom_text(data=make_num, aes(x=long, y=lat, label=MAKE), size=2, color='lightblue') + coord_map()
+```
+
+The most dangerous vehicle is defined as the make of vehicle that has killed the most people per state, according to the max number killed per accident.
+
+
+### Question 5
+```{r}
+acc_people <- full_join(acc, people) %>%
+  select(STATE, COUNTY, CITY, MONTH, DAY, DAY_WEEK, YEAR, HOUR, MINUTE, LATITUDE, LONGITUD, FATALS, AGE, SEX, PER_TYP, INJ_SEV)
+str(acc_people)
+```
+
+
+### Question 6
+```{r}
+ggplot(acc, aes(DAY_WEEK)) + geom_bar()
+
+hour1 <- acc %>%
+  filter(HOUR == 1:24)
+ggplot(hour1, aes(HOUR)) + geom_bar()
+
+gender <- people %>%
+  filter(SEX == 1:2)
+ggplot(gender, aes(SEX)) + geom_bar()
+```
+
+
+### Question 7
+```{r}
+county <- map_data('county')
+county$`County Name` = county$subregion
+county_death <- county %>%
+  left_join(codes, by='County Name')
+ggplot(county_death, aes(x=long, y=lat)) + geom_path(aes(group=group)) + coord_map()
+```
+
+I could not figure this one out completely, I left the county map in case I can get any credit for that.
+
+
+### Question 8
+```{r}
+ggplot(acc, aes(MONTH)) + geom_bar()
+
+acc %>%
+  ggplot(aes(MONTH)) + geom_bar() + facet_wrap(~STATE)
+```
+
+Based on all of the data, month 7 (or July, which is in the summer) is the most dangerous. When you look at it on a state level this changes, but not by a lot. Some states have a much higher accident count than others which is shown in the figure, such as state 6 (California), state 12 (Florida), and state 48 (Texas). Generally, the most accidents occur in July, which is a summer month.
